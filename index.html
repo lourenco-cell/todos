@@ -337,7 +337,7 @@ function handleMeeting(text){
   const end=new Date(d.getTime()+3600000);
   const title=text.replace(/reunião|reuniao/gi,'').replace(/amanhã|amanha|segunda|terça|terca|quarta|quinta|sexta/gi,'').replace(/\d{1,2}(?:[:.]\d{2})?\s*h(?:oras)?/gi,'').replace(/\s+/g,' ').trim();
   showToast('📅 A abrir calendário...');
-  setTimeout(()=>window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Reunião '+(title||''))+'&dates='+fmt(d)+'/'+fmt(end),'_blank'),600);
+  window.location.href='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Reunião '+(title||''))+'&dates='+fmt(d)+'/'+fmt(end);
 }
 
 function toggleMic(){
