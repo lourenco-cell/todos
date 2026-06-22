@@ -348,8 +348,15 @@ function toggleMic(){
   recognition.onstart=()=>{isRecording=true;document.getElementById('mic-btn').className='mic-btn recording';};
   recognition.onresult=(e)=>{
     const t=e.results[0][0].transcript;
-    if(t.toLowerCase().includes('reunião')||t.toLowerCase().includes('reuniao')){handleMeeting(t);}
-    else{document.getElementById('task-input').value=t;pendingText=t;setTimeout(()=>openAddModal(),300);}
+    if(t.toLowerCase().includes('reunião')||t.toLowerCase().includes('reuniao')){
+      const d=parseDate(t);const pad=n=>String(n).padStart(2,'0');
+      const fmt=dt=>dt.getFullYear()+''+pad(dt.getMonth()+1)+''+pad(dt.getDate())+'T'+pad(dt.getHours())+''+pad(dt.getMinutes())+'00';
+      const end=new Date(d.getTime()+3600000);
+      const title=t.replace(/reunião|reuniao/gi,'').replace(/amanhã|amanha|segunda|terça|terca|quarta|quinta|sexta/gi,'').replace(/\d{1,2}(?:[:.]\d{2})?\s*h(?:oras)?/gi,'').replace(/\s+/g,' ').trim();
+      const url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('Reunião '+(title||''))+'&dates='+fmt(d)+'/'+fmt(end);
+      showToast('📅 A abrir calendário...');
+      window.location.href=url;
+    } else{document.getElementById('task-input').value=t;pendingText=t;setTimeout(()=>openAddModal(),300);}
   };
   recognition.onend=()=>{isRecording=false;document.getElementById('mic-btn').className='mic-btn';};
   recognition.onerror=()=>{isRecording=false;document.getElementById('mic-btn').className='mic-btn';showToast('Não foi possível captar áudio.');};
