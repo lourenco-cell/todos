@@ -26,6 +26,11 @@
   .list-container{padding:0 16px;margin-top:4px;}
   .section-title{font-size:11px;font-weight:600;color:#888;letter-spacing:0.06em;text-transform:uppercase;padding:14px 0 6px;display:flex;align-items:center;gap:5px;}
   .section-card{background:#fff;margin:0 -16px;border-top:0.5px solid #f0f0f0;border-bottom:0.5px solid #f0f0f0;}
+  .day-header{display:flex;align-items:center;gap:8px;padding:12px 16px 6px;background:#fafafa;border-bottom:0.5px solid #f0f0f0;}
+  .day-header.today{background:#eff6ff;}
+  .day-name{font-size:13px;font-weight:700;color:#1a1a1a;}
+  .day-name.today{color:#2563eb;}
+  .day-count{font-size:11px;color:#aaa;}
   .task-row{display:flex;align-items:flex-start;gap:10px;padding:11px 16px;border-bottom:0.5px solid #f0f0f0;background:#fff;}
   .task-row.urgent{border-left:3px solid #ef4444;padding-left:13px;}
   .task-row:last-child{border-bottom:none;}
@@ -195,16 +200,13 @@ function buildRecRow(task,idx){
   const row=document.createElement('div');row.className='task-row';
   const cb=document.createElement('input');cb.type='checkbox';cb.className='task-cb';cb.checked=task.done;
   cb.onchange=()=>{appData.rec[idx].done=cb.checked;saveData();renderProf();};
-  const info=document.createElement('div');info.className='task-info';
-  const pillsRow=document.createElement('div');pillsRow.className='day-pills';
-  task.days.forEach(d=>{const p=document.createElement('span');p.className='pill'+(d===todayName?' today':'');p.textContent=d;pillsRow.appendChild(p);});
+  const label=document.createElement('span');label.className='task-text'+(task.done?' done':'');label.style.flex='1';label.textContent=task.text;
   const editBtn=document.createElement('button');editBtn.className='edit-days-btn';editBtn.textContent='✎';editBtn.title='Editar dias';
   editBtn.onclick=()=>openDaysModal(task.text,task.days,idx);
-  pillsRow.appendChild(editBtn);
-  const label=document.createElement('span');label.className='task-text'+(task.done?' done':'');label.textContent=task.text;
-  info.appendChild(pillsRow);info.appendChild(label);
   const del=document.createElement('button');del.className='del-btn';del.textContent='×';del.onclick=()=>{appData.rec.splice(idx,1);saveData();renderProf();};
-  row.appendChild(cb);row.appendChild(info);row.appendChild(del);return row;
+  const actions=document.createElement('div');actions.className='task-actions';
+  actions.appendChild(editBtn);actions.appendChild(del);
+  row.appendChild(cb);row.appendChild(label);row.appendChild(actions);return row;
 }
 
 function buildPonRow(task,i){
@@ -233,20 +235,40 @@ function renderProf(){
   const el=document.getElementById('main-list');el.innerHTML='';
   const st1=document.createElement('div');st1.className='section-title';st1.textContent='🔁  Recorrentes';el.appendChild(st1);
   const c1=document.createElement('div');c1.className='section-card';
-  const todayRec=appData.rec.filter(t=>t.days.includes(todayName));
-  const otherRec=appData.rec.filter(t=>!t.days.includes(todayName));
-  if(!todayRec.length){const m=document.createElement('p');m.className='empty-msg';m.textContent=todayName?'Sem recorrentes para hoje.':'Hoje é fim de semana — bom descanso! 🏄';c1.appendChild(m);}
-  todayRec.forEach(t=>c1.appendChild(buildRecRow(t,appData.rec.indexOf(t))));
-  if(otherRec.length){
-    const tog=document.createElement('button');tog.className='show-others-btn';
-    const ic=document.createElement('span');ic.textContent='▸';tog.appendChild(ic);
-    const tx=document.createElement('span');tx.textContent=' Outros dias ('+otherRec.length+')';tog.appendChild(tx);
-    const od=document.createElement('div');od.style.display='none';
-    otherRec.forEach(t=>od.appendChild(buildRecRow(t,appData.rec.indexOf(t))));
-    tog.onclick=()=>{const o=od.style.display==='block';od.style.display=o?'none':'block';ic.textContent=o?'▸':'▾';};
-    c1.appendChild(tog);c1.appendChild(od);
+
+  const dayFull={'Seg':'Segunda-feira','Ter':'Terça-feira','Qua':'Quarta-feira','Qui':'Quinta-feira','Sex':'Sexta-feira'};
+  // Order: today first, then the rest of the week in order
+  const order=[...DAYS];
+  if(todayName){
+    order.sort((a,b)=>{
+      if(a===todayName)return -1;
+      if(b===todayName)return 1;
+      return DAYS.indexOf(a)-DAYS.indexOf(b);
+    });
+  }
+
+  let anyTask=false;
+  order.forEach(day=>{
+    const tasksForDay=appData.rec.filter(t=>t.days.includes(day));
+    if(!tasksForDay.length)return;
+    anyTask=true;
+    const isToday=day===todayName;
+    const header=document.createElement('div');header.className='day-header'+(isToday?' today':'');
+    const name=document.createElement('span');name.className='day-name'+(isToday?' today':'');
+    name.textContent=dayFull[day]+(isToday?' · Hoje':'');
+    const count=document.createElement('span');count.className='day-count';
+    const doneCount=tasksForDay.filter(t=>t.done).length;
+    count.textContent=doneCount+'/'+tasksForDay.length;
+    header.appendChild(name);header.appendChild(count);
+    c1.appendChild(header);
+    tasksForDay.forEach(t=>c1.appendChild(buildRecRow(t,appData.rec.indexOf(t))));
+  });
+
+  if(!anyTask){
+    const m=document.createElement('p');m.className='empty-msg';m.textContent='Sem tarefas recorrentes.';c1.appendChild(m);
   }
   el.appendChild(c1);
+
   const st2=document.createElement('div');st2.className='section-title';st2.style.marginTop='8px';st2.textContent='⚡  Pontuais';el.appendChild(st2);
   const c2=document.createElement('div');c2.className='section-card';
   const sorted=[...appData.pon.filter(t=>t.urgent),...appData.pon.filter(t=>!t.urgent)];
